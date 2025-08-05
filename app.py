@@ -20,54 +20,24 @@ def generate_embeddings(_model, texts):
 
 @st.cache_resource
 def load_summarizer():
-    from llama_cpp import Llama
-    import os
     import requests
+    import os
     from pathlib import Path
     
-    os.environ['GGML_METAL'] = '0'
-    
-    model_path = "./mistral-7b-instruct-v0.2.Q4_K_M.gguf"
-    
-    if not Path(model_path).exists():
-        st.info("Downloading AI model (3GB) - this may take a few minutes on first run...")
+    if Path("./mistral-7b-instruct-v0.2.Q4_K_M.gguf").exists():
+        from llama_cpp import Llama
+        os.environ['GGML_METAL'] = '0'
         
-        model_url = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
-        
-        try:
-            with st.spinner("Downloading model... Please wait."):
-                response = requests.get(model_url, stream=True)
-                response.raise_for_status()
-                
-                total_size = int(response.headers.get('content-length', 0))
-                downloaded_size = 0
-                
-                with open(model_path, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded_size += len(chunk)
-                            
-                            if downloaded_size % (50 * 1024 * 1024) == 0:
-                                progress = (downloaded_size / total_size) * 100 if total_size > 0 else 0
-                                st.info(f"Download progress: {progress:.1f}%")
-                
-                st.success("Model downloaded successfully!")
-                
-        except Exception as e:
-            st.error(f"Failed to download model: {str(e)}")
-            st.error("Please try refreshing the page or contact support.")
-            return None
-    
-    llm = Llama(
-        model_path=model_path,
-        n_ctx=32768,
-        n_threads=8,
-        n_gpu_layers=0,
-        verbose=False
-    )
-    
-    return llm
+        llm = Llama(
+            model_path="./mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+            n_ctx=32768,
+            n_threads=8,
+            n_gpu_layers=0,
+            verbose=False
+        )
+        return llm
+    else:
+        return "huggingface_api"
 
 def extract_name_from_text(text):
     lines = text.strip().split('\n')[:5]
@@ -128,7 +98,9 @@ def generate_ai_summary(job_description: str,
     try:
         match_percentage = similarity_score * 100
         
-        prompt = f"""[INST] You are an expert technical recruiter. This candidate has a {match_percentage:.1f}% semantic similarity score with the job requirements. Scores 20-40% indicate some relevant skills, 40-60% show reasonable alignment, 60-80% demonstrate strong fit, and 80%+ indicate excellent match. Provide a balanced 2-3 sentence assessment of their qualifications.
+        prompt = f"""[INST] You are an expert technical recruiter reviewing a candidate's resume in relation to a specific job description. A semantic similarity score of {match_percentage:.1f}% was computed, reflecting the degree of alignment between the candidate's experience and the role's requirements. Use this score to guide your judgment: scores around 20–40% indicate limited overlap with some relevant elements; 40–60% suggests partial alignment; 60–80% signals strong fit across core criteria; and scores above 80% reflect an exceptional match.
+
+Write a concise, specific, and insightful 2–3 sentence evaluation that accurately reflects the candidate's qualifications. Prioritize clarity over formality, and focus on areas of demonstrated alignment, notable gaps, and real potential to grow into the role. Avoid generalities or generic soft skill phrases unless grounded in observable evidence from the resume. This summary should read as if you were presenting the candidate to a hiring manager, honest, efficient, and grounded in substance.
 
 JOB DESCRIPTION:
 {job_description}
@@ -136,25 +108,59 @@ JOB DESCRIPTION:
 CANDIDATE RESUME:
 {resume_text}
 
-MATCH SCORE: {match_percentage:.1f}%
+ASSESSMENT: [/INST]"""
 
-HONEST ASSESSMENT: [/INST]"""
-
-        response = mistral_llm(
-            prompt,
-            max_tokens=500,
-            temperature=0.3,
-            top_p=0.9,
-            top_k=50,
-            repeat_penalty=1.1,
-            stop=["[INST]"],
-            echo=False
-        )
-        
-        if 'choices' in response and len(response['choices']) > 0:
-            summary = response['choices'][0]['text'].strip()
+        if mistral_llm == "huggingface_api":
+            import requests
+            import os
+            
+            try:
+                hf_token = st.secrets.get("HF_TOKEN", None)
+            except:
+                hf_token = os.getenv("HF_TOKEN")
+            
+            headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
+            
+            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+            
+            payload = {
+                "inputs": prompt,
+                "parameters": {
+                    "max_new_tokens": 500,
+                    "temperature": 0.3,
+                    "top_p": 0.9,
+                    "top_k": 50,
+                    "repetition_penalty": 1.1,
+                    "stop": ["[INST]"]
+                }
+            }
+            
+            response = requests.post(api_url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list) and len(result) > 0:
+                    summary = result[0].get("generated_text", "").replace(prompt, "").strip()
+                else:
+                    summary = "Could not generate summary."
+            else:
+                summary = "Could not generate summary."
         else:
-            summary = "Could not generate summary."
+            response = mistral_llm(
+                prompt,
+                max_tokens=500,
+                temperature=0.3,
+                top_p=0.9,
+                top_k=50,
+                repeat_penalty=1.1,
+                stop=["[INST]"],
+                echo=False
+            )
+            
+            if 'choices' in response and len(response['choices']) > 0:
+                summary = response['choices'][0]['text'].strip()
+            else:
+                summary = "Could not generate summary."
         
         if summary and len(summary) > 10:
             summary = summary.replace("[/INST]", "").replace("</s>", "").strip()
@@ -201,7 +207,7 @@ with col1:
 with col2:
     if uploaded_files:
         max_candidates = len(uploaded_files)
-        default_candidates = max_candidates // 2
+        default_candidates = max_candidates
         
         num_candidates = st.slider(
             "Number of top candidates to display",
