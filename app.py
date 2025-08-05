@@ -21,12 +21,46 @@ def generate_embeddings(_model, texts):
 @st.cache_resource
 def load_summarizer():
     from llama_cpp import Llama
-    
     import os
+    import requests
+    from pathlib import Path
+    
     os.environ['GGML_METAL'] = '0'
     
+    model_path = "./mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+    
+    if not Path(model_path).exists():
+        st.info("Downloading AI model (3GB) - this may take a few minutes on first run...")
+        
+        model_url = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+        
+        try:
+            with st.spinner("Downloading model... Please wait."):
+                response = requests.get(model_url, stream=True)
+                response.raise_for_status()
+                
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded_size = 0
+                
+                with open(model_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            
+                            if downloaded_size % (50 * 1024 * 1024) == 0:
+                                progress = (downloaded_size / total_size) * 100 if total_size > 0 else 0
+                                st.info(f"Download progress: {progress:.1f}%")
+                
+                st.success("Model downloaded successfully!")
+                
+        except Exception as e:
+            st.error(f"Failed to download model: {str(e)}")
+            st.error("Please try refreshing the page or contact support.")
+            return None
+    
     llm = Llama(
-        model_path="./mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        model_path=model_path,
         n_ctx=32768,
         n_threads=8,
         n_gpu_layers=0,
