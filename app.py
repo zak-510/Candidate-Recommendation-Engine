@@ -142,84 +142,57 @@ Assessment:"""
             if not hf_token:
                 hf_token = os.getenv("HF_TOKEN")
             
-            # If no token, try without authentication (public inference API)
+            # MISTRAL ONLY - no fallbacks
             headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
             
-            # Use a more reliable model endpoint
-            api_url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
+            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
             
-            # Try multiple models in case one fails
-            model_urls = [
-                "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
-                "https://api-inference.huggingface.co/models/gpt2",
-                "https://api-inference.huggingface.co/models/distilgpt2"
-            ]
+            payload = {
+                "inputs": prompt,
+                "parameters": {
+                    "max_new_tokens": 300,
+                    "temperature": 0.3,
+                    "top_p": 0.9,
+                    "top_k": 50,
+                    "repetition_penalty": 1.1,
+                    "return_full_text": False
+                }
+            }
             
-            for api_url in model_urls:
-                try:
-                    payload = {
-                        "inputs": prompt,
-                        "parameters": {
-                            "max_new_tokens": 200,
-                            "temperature": 0.7,
-                            "do_sample": True,
-                            "return_full_text": False
-                        }
-                    }
-                    
-                    response = requests.post(
-                        api_url, 
-                        headers=headers, 
-                        json=payload,
-                        timeout=30
-                    )
-                    
-                    if response.status_code == 200:
-                        result = response.json()
-                        
-                        # Handle different response formats
-                        if isinstance(result, list) and len(result) > 0:
-                            if "generated_text" in result[0]:
-                                summary = result[0]["generated_text"].strip()
-                            elif "text" in result[0]:
-                                summary = result[0]["text"].strip()
-                            else:
-                                continue
-                        elif isinstance(result, dict):
-                            if "generated_text" in result:
-                                summary = result["generated_text"].strip()
-                            elif "text" in result:
-                                summary = result["text"].strip()
-                            else:
-                                continue
-                        else:
-                            continue
-                        
-                        # Clean up the summary
-                        if summary and len(summary) > 20:
-                            # Remove the original prompt if it's echoed back
-                            if prompt in summary:
-                                summary = summary.replace(prompt, "").strip()
-                            
-                            # Clean up common artifacts
-                            summary = summary.replace("[/INST]", "").replace("</s>", "").strip()
-                            
-                            # Basic validation - make sure it's not just repeating input
-                            if (not summary.lower().startswith(job_description[:30].lower()) and 
-                                not summary.lower().startswith(resume_text[:30].lower()) and
-                                len(summary) > 30):
-                                return summary
-                    
-                    elif response.status_code == 503:
-                        # Model is loading, wait and try next
-                        time.sleep(2)
-                        continue
-                    
-                except requests.exceptions.RequestException:
-                    continue
+            response = requests.post(
+                api_url, 
+                headers=headers, 
+                json=payload,
+                timeout=60
+            )
             
-            # If all API calls fail, return a simple error message
-            return "AI summary temporarily unavailable. Please try again."
+            if response.status_code == 200:
+                result = response.json()
+                
+                if isinstance(result, list) and len(result) > 0:
+                    summary = result[0].get("generated_text", "").strip()
+                else:
+                    summary = result.get("generated_text", "").strip()
+                
+                # Clean up the summary
+                if summary and len(summary) > 20:
+                    # Remove the original prompt if it's echoed back
+                    if prompt in summary:
+                        summary = summary.replace(prompt, "").strip()
+                    
+                    # Clean up common artifacts
+                    summary = summary.replace("[/INST]", "").replace("</s>", "").strip()
+                    
+                    return summary
+                else:
+                    return f"Mistral API returned empty response. Status: {response.status_code}"
+            
+            elif response.status_code == 503:
+                return "Mistral model is loading. Please wait a moment and try again."
+            elif response.status_code == 401:
+                return "Mistral API authentication failed. Please check HF_TOKEN."
+            else:
+                return f"Mistral API error: {response.status_code} - {response.text}"
             
         else:
             # Local model handling
