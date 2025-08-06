@@ -147,7 +147,7 @@ def generate_ai_summary(job_description: str,
             # MISTRAL ONLY - no fallbacks
             headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
             
-            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
+            api_url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
             
             payload = {
                 "inputs": prompt,
