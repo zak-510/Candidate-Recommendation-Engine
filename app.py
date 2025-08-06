@@ -113,7 +113,7 @@ def generate_ai_summary(job_description: str,
     try:
         match_percentage = similarity_score * 100
         
-                prompt_body = (
+        prompt_body = (
             f"You are an expert technical recruiter reviewing a candidate's resume in relation to a specific job description. "
             f"A semantic similarity score of {match_percentage:.1f}% was computed, reflecting the degree of alignment between the candidate’s experience and the role’s requirements. "
             "Use this score to guide your judgment: scores around 20–40% indicate limited overlap with some relevant elements; "
