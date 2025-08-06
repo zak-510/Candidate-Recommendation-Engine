@@ -112,11 +112,19 @@ def generate_ai_summary(job_description: str,
         
         prompt_body = (
             f"You are an expert technical recruiter assessing a candidate's resume against a job description. "
-            f"A semantic similarity score of {match_percentage:.1f}% reflects how well the candidate's experience matches the role. "
-            "Use this score as a rough guide: 20–39% = low match, 40–59% = partial fit, 60–79% = strong fit, 80–100% = excellent match.\n\n"
-            "Write 2–3 **specific** sentences. Be blunt. Mention exactly what aligns, what's missing, and where the candidate could grow. "
-            "Only point out strengths that are clearly supported by resume evidence. Avoid vague traits like 'team player' or 'fast learner' unless proven. "
-            "Write like you're briefing a hiring manager who wants a fast, no-nonsense summary.\n\n"
+            f"A semantic similarity score of {match_percentage:.1f}% reflects how well the candidate's experience aligns with the role. "
+            "Use this scale to interpret the score:\n"
+            "• 0–19% = very little to no overlap\n"
+            "• 20–39% = limited relevance (some general overlap but weak alignment with core needs)\n"
+            "• 40–59% = partial fit (some responsibilities or skills match, but important gaps remain)\n"
+            "• 60–79% = strong fit (most core criteria are present, possibly missing domain or scaling experience)\n"
+            "• 80–100% = excellent match (skills, responsibilities, and context all align closely)\n\n"
+            "Write 2–3 **specific** sentences. Stick to this structure:\n"
+            "1. Briefly summarize the degree of alignment, citing 1–2 specific areas of overlap.\n"
+            "2. Identify any missing qualifications or areas where the candidate may need ramp-up.\n"
+            "3. (Optional) Note potential for growth, if clear from the resume.\n\n"
+            "Only mention strengths that are clearly supported by the resume. Avoid vague soft skills like 'team player' or 'fast learner' unless explicitly demonstrated. "
+            "Write as if briefing a hiring manager — direct, grounded in evidence, and no fluff.\n\n"
             "JOB DESCRIPTION:\n" + job_description[:1000] +
             "\n\nCANDIDATE RESUME:\n" + resume_text[:2000] +
             "\n\nASSESSMENT:"
