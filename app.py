@@ -133,32 +133,32 @@ def generate_ai_summary(job_description: str,
             import os
             import time
             
-            # Try to get HF token from secrets or environment
-            hf_token = None
+            # Try to get OpenRouter token from secrets or environment
+            openrouter_token = None
             try:
-                if hasattr(st, 'secrets') and 'HF_TOKEN' in st.secrets:
-                    hf_token = st.secrets["HF_TOKEN"]
+                if hasattr(st, 'secrets') and 'OPENROUTER_TOKEN' in st.secrets:
+                    openrouter_token = st.secrets["OPENROUTER_TOKEN"]
             except:
                 pass
             
-            if not hf_token:
-                hf_token = os.getenv("HF_TOKEN")
+            if not openrouter_token:
+                openrouter_token = os.getenv("OPENROUTER_TOKEN")
             
-            # MISTRAL ONLY - no fallbacks
-            headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
+            headers = {
+                "Authorization": f"Bearer {openrouter_token}",
+                "Content-Type": "application/json"
+            }
             
-            api_url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
+            api_url = "https://openrouter.ai/api/v1/chat/completions"
             
             payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": 300,
-                    "temperature": 0.3,
-                    "top_p": 0.9,
-                    "top_k": 50,
-                    "repetition_penalty": 1.1,
-                    "return_full_text": False
-                }
+                "model": "mistralai/mistral-small-3.1-24b-instruct:free",
+                "messages": [
+                    {"role": "user", "content": prompt_body}
+                ],
+                "max_tokens": 300,
+                "temperature": 0.3,
+                "top_p": 0.9
             }
             
             response = requests.post(
@@ -172,32 +172,22 @@ def generate_ai_summary(job_description: str,
             if response.status_code == 200:
                 result = response.json()
                 
-                if isinstance(result, list) and len(result) > 0:
-                    summary = result[0].get("generated_text", "").strip()
-                else:
-                    summary = result.get("generated_text", "").strip()
-                
-                # Clean up the summary
-                if summary and len(summary) > 20:
-                    # Remove the original prompt if it's echoed back
-                    if prompt in summary:
-                        summary = summary.replace(prompt, "").strip()
+                if "choices" in result and len(result["choices"]) > 0:
+                    summary = result["choices"][0]["message"]["content"].strip()
                     
-                    # Clean up common artifacts
-                    summary = summary.replace("[/INST]", "").replace("</s>", "").strip()
-                    
-                    return summary
+                    if summary and len(summary) > 20:
+                        return summary
+                    else:
+                        return f"OpenRouter returned empty response. Status: {response.status_code}"
                 else:
-                    return f"Mistral API returned empty response. Status: {response.status_code}"
+                    return f"OpenRouter API returned unexpected format: {result}"
             
-            elif response.status_code == 503:
-                return "Mistral model is loading. Please wait a moment and try again."
             elif response.status_code == 401:
-                return f"Authentication failed. Token: {'Present' if hf_token else 'Missing'}"
-            elif response.status_code == 403:
-                return "Access denied. Accept model terms at https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3"
+                return f"OpenRouter authentication failed. Token: {'Present' if openrouter_token else 'Missing'}"
+            elif response.status_code == 429:
+                return "OpenRouter: Rate limit exceeded. Please wait and try again."
             else:
-                return f"API error {response.status_code}: {response.text[:200]}"
+                return f"OpenRouter API error {response.status_code}: {response.text[:200]}"
             
         else:
             # Local model handling
