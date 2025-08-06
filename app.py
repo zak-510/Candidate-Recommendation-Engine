@@ -113,18 +113,16 @@ def generate_ai_summary(job_description: str,
     try:
         match_percentage = similarity_score * 100
         
-        # Simplified prompt that works better with the API
-        prompt = f"""You are an expert recruiter. Analyze this candidate's resume against the job requirements and provide a 2-3 sentence assessment.
-
-Job Requirements:
-{job_description[:1000]}
-
-Candidate Resume:
-{resume_text[:2000]}
-
-Match Score: {match_percentage:.1f}%
-
-Assessment:"""
+        # Prompt formatted for Mistral Instruct model
+        prompt_body = (
+            "You are an expert technical recruiter. Review the candidate's resume against the job requirements "
+            "and provide a concise 2-3 sentence assessment focusing on fit, notable strengths, and gaps."
+            "\n\nJob Requirements:\n" + job_description[:1000] +
+            "\n\nCandidate Resume:\n" + resume_text[:2000] +
+            f"\n\nMatch Score: {match_percentage:.1f}%\n\nAssessment:"
+        )
+        # Wrap with Mistral chat markers
+        prompt = f"<s>[INST] {prompt_body} [/INST]"
 
         if mistral_llm == "huggingface_api":
             import requests
