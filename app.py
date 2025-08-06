@@ -121,8 +121,7 @@ def generate_ai_summary(job_description: str,
             "• 80–100% = excellent match (skills, responsibilities, and context all align closely)\n\n"
             "Write 2–3 **specific** sentences. Stick to this structure:\n"
             "1. Briefly summarize the degree of alignment, citing 1–2 specific areas of overlap.\n"
-            "2. Identify any missing qualifications or areas where the candidate may need ramp-up.\n"
-            "3. (Optional) Note potential for growth, if clear from the resume.\n\n"
+            "2. Identify any missing qualifications or areas where the candidate may need ramp-up.\n\n"
             "Only mention strengths that are clearly supported by the resume. Avoid vague soft skills like 'team player' or 'fast learner' unless explicitly demonstrated. "
             "Write as if briefing a hiring manager — direct, grounded in evidence, and no fluff.\n\n"
             "JOB DESCRIPTION:\n" + job_description[:1000] +
