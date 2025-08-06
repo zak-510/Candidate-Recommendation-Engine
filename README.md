@@ -24,28 +24,20 @@ Key capabilities include:
 
 **Name Detection**: Automatically extracts candidate names from resumes for easy identification  
 
-## Installation and Setup
+## Deployment
 
-Follow these steps to get the application running on your system:
+This application is designed to run on Streamlit Cloud with cloud-based AI processing.
 
-### 1. Clone the Repository
-```bash
-git clone <repository-url>
-cd sprouts
-```
+### Access the Live Application
+The application is deployed and accessible at your Streamlit Cloud URL.
 
-### 2. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
+### Local Development (Optional)
+If you want to run locally for development:
 
-### 3. Launch the Application
-```bash
-streamlit run app.py
-```
-
-### 4. Access the Interface
-Open your web browser and navigate to `http://localhost:8501` to access the application interface.
+1. Clone the repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Set up your OpenRouter API key in `.streamlit/secrets.toml`
+4. Run: `streamlit run app.py`
 
 ## Usage Instructions
 
@@ -68,7 +60,7 @@ The application leverages several key technologies:
 
 - **Streamlit**: Provides the web-based user interface and application framework
 - **Sentence Transformers**: Handles semantic text embeddings using the all-MiniLM-L6-v2 model
-- **Mistral AI**: Generates contextual summaries explaining candidate fit
+- **Mistral Small 3.1 24B**: Advanced 24B parameter model via OpenRouter API for high-quality candidate assessments
 - **PyMuPDF**: Extracts text content from PDF documents
 - **Scikit-learn**: Performs cosine similarity calculations for ranking
 

@@ -44,14 +44,11 @@ def load_summarizer():
                     n_gpu_layers=0,
                     verbose=False
                 )
-                st.success(f"✅ Loaded local model: {model_path}")
                 return llm
             except Exception as e:
-                st.warning(f"Failed to load local model {model_path}: {str(e)}")
+                pass
                 continue
     
-    # Fall back to Hugging Face API
-    st.info("🌐 Using Hugging Face API for AI summaries")
     return "huggingface_api"
 
 def extract_name_from_text(text):
@@ -114,14 +111,12 @@ def generate_ai_summary(job_description: str,
         match_percentage = similarity_score * 100
         
         prompt_body = (
-            f"You are an expert technical recruiter reviewing a candidate's resume in relation to a specific job description. "
-            f"A semantic similarity score of {match_percentage:.1f}% was computed, reflecting the degree of alignment between the candidate’s experience and the role’s requirements. "
-            "Use this score to guide your judgment: scores around 20–40% indicate limited overlap with some relevant elements; "
-            "40–60% suggests partial alignment; 60–80% signals strong fit across core criteria; and scores above 80% reflect an exceptional match.\n\n"
-            "Write a concise, specific, and insightful 2–3 sentence evaluation that accurately reflects the candidate's qualifications. "
-            "Prioritize clarity over formality, and focus on areas of demonstrated alignment, notable gaps, and real potential to grow into the role. "
-            "Avoid generalities or generic soft skill phrases unless grounded in observable evidence from the resume. "
-            "This summary should read as if you were presenting the candidate to a hiring manager — honest, efficient, and grounded in substance.\n\n"
+            f"You are an expert technical recruiter assessing a candidate's resume against a job description. "
+            f"A semantic similarity score of {match_percentage:.1f}% reflects how well the candidate's experience matches the role. "
+            "Use this score as a rough guide: 20–39% = low match, 40–59% = partial fit, 60–79% = strong fit, 80–100% = excellent match.\n\n"
+            "Write 2–3 **specific** sentences. Be blunt. Mention exactly what aligns, what's missing, and where the candidate could grow. "
+            "Only point out strengths that are clearly supported by resume evidence. Avoid vague traits like 'team player' or 'fast learner' unless proven. "
+            "Write like you're briefing a hiring manager who wants a fast, no-nonsense summary.\n\n"
             "JOB DESCRIPTION:\n" + job_description[:1000] +
             "\n\nCANDIDATE RESUME:\n" + resume_text[:2000] +
             "\n\nASSESSMENT:"
@@ -182,12 +177,8 @@ def generate_ai_summary(job_description: str,
                 else:
                     return f"OpenRouter API returned unexpected format: {result}"
             
-            elif response.status_code == 401:
-                return f"OpenRouter authentication failed. Token: {'Present' if openrouter_token else 'Missing'}"
-            elif response.status_code == 429:
-                return "OpenRouter: Rate limit exceeded. Please wait and try again."
             else:
-                return f"OpenRouter API error {response.status_code}: {response.text[:200]}"
+                return "Could not generate summary."
             
         else:
             # Local model handling
