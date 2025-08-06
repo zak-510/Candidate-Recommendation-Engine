@@ -218,8 +218,8 @@ Assessment:"""
                 except requests.exceptions.RequestException:
                     continue
             
-            # If all API calls fail, generate a basic rule-based summary
-            return generate_rule_based_summary(job_description, resume_text, similarity_score)
+            # If all API calls fail, return a simple error message
+            return "AI summary temporarily unavailable. Please try again."
             
         else:
             # Local model handling
@@ -239,70 +239,12 @@ Assessment:"""
                 if summary and len(summary) > 20:
                     return summary
             
-            # Fallback to rule-based if local model fails
-            return generate_rule_based_summary(job_description, resume_text, similarity_score)
+            # If local model fails, try API
+            return "AI summary temporarily unavailable. Please try again."
 
     except Exception as e:
         st.error(f"Error generating AI summary: {str(e)}")
-        return generate_rule_based_summary(job_description, resume_text, similarity_score)
-
-def generate_rule_based_summary(job_description: str, resume_text: str, similarity_score: float) -> str:
-    """Generate a rule-based summary when AI models are unavailable"""
-    match_percentage = similarity_score * 100
-    
-    # Extract key skills/technologies from job description
-    job_keywords = extract_key_terms(job_description.lower())
-    resume_keywords = extract_key_terms(resume_text.lower())
-    
-    # Find matching keywords
-    matching_keywords = job_keywords.intersection(resume_keywords)
-    
-    if match_percentage >= 70:
-        strength = "strong"
-        fit_desc = "excellent alignment"
-    elif match_percentage >= 50:
-        strength = "good"
-        fit_desc = "solid alignment"
-    elif match_percentage >= 30:
-        strength = "moderate"
-        fit_desc = "partial alignment"
-    else:
-        strength = "limited"
-        fit_desc = "some relevant experience"
-    
-    summary = f"This candidate shows {fit_desc} with the role requirements ({match_percentage:.1f}% match). "
-    
-    if matching_keywords:
-        key_matches = list(matching_keywords)[:3]
-        summary += f"Key matching areas include: {', '.join(key_matches)}. "
-    
-    if match_percentage >= 60:
-        summary += "Strong candidate worth interviewing."
-    elif match_percentage >= 40:
-        summary += "Candidate has potential with some skill gaps to consider."
-    else:
-        summary += "Limited match but may have transferable skills."
-    
-    return summary
-
-def extract_key_terms(text: str) -> set:
-    """Extract key technical terms and skills from text"""
-    import re
-    
-    # Common technical terms and skills
-    tech_patterns = [
-        r'\b(?:python|java|javascript|react|node|sql|aws|docker|kubernetes|git)\b',
-        r'\b(?:machine learning|data science|frontend|backend|full stack|devops)\b',
-        r'\b(?:api|database|cloud|agile|scrum|ci/cd|microservices)\b',
-        r'\b(?:html|css|mongodb|postgresql|redis|elasticsearch)\b'
-    ]
-    
-    terms = set()
-    for pattern in tech_patterns:
-        matches = re.findall(pattern, text, re.IGNORECASE)
-        terms.update([match.lower() for match in matches])
-    
-    return terms
+        return "AI summary temporarily unavailable. Please try again."
 
 st.title("Candidate Recommendation Engine")
 
