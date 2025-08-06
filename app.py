@@ -113,15 +113,19 @@ def generate_ai_summary(job_description: str,
     try:
         match_percentage = similarity_score * 100
         
-        # Prompt formatted for Mistral Instruct model
-        prompt_body = (
-            "You are an expert technical recruiter. Review the candidate's resume against the job requirements "
-            "and provide a concise 2-3 sentence assessment focusing on fit, notable strengths, and gaps."
-            "\n\nJob Requirements:\n" + job_description[:1000] +
-            "\n\nCandidate Resume:\n" + resume_text[:2000] +
-            f"\n\nMatch Score: {match_percentage:.1f}%\n\nAssessment:"
+                prompt_body = (
+            f"You are an expert technical recruiter reviewing a candidate's resume in relation to a specific job description. "
+            f"A semantic similarity score of {match_percentage:.1f}% was computed, reflecting the degree of alignment between the candidate’s experience and the role’s requirements. "
+            "Use this score to guide your judgment: scores around 20–40% indicate limited overlap with some relevant elements; "
+            "40–60% suggests partial alignment; 60–80% signals strong fit across core criteria; and scores above 80% reflect an exceptional match.\n\n"
+            "Write a concise, specific, and insightful 2–3 sentence evaluation that accurately reflects the candidate's qualifications. "
+            "Prioritize clarity over formality, and focus on areas of demonstrated alignment, notable gaps, and real potential to grow into the role. "
+            "Avoid generalities or generic soft skill phrases unless grounded in observable evidence from the resume. "
+            "This summary should read as if you were presenting the candidate to a hiring manager — honest, efficient, and grounded in substance.\n\n"
+            "JOB DESCRIPTION:\n" + job_description[:1000] +
+            "\n\nCANDIDATE RESUME:\n" + resume_text[:2000] +
+            "\n\nASSESSMENT:"
         )
-        # Wrap with Mistral chat markers
         prompt = f"<s>[INST] {prompt_body} [/INST]"
 
         if mistral_llm == "huggingface_api":
