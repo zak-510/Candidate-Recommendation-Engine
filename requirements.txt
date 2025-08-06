@@ -6,4 +6,3 @@ numpy
 transformers
 torch
 requests
-llama-cpp-python
