@@ -193,9 +193,11 @@ def generate_ai_summary(job_description: str,
             elif response.status_code == 503:
                 return "Mistral model is loading. Please wait a moment and try again."
             elif response.status_code == 401:
-                return "Mistral API authentication failed. Please check HF_TOKEN."
+                return f"Authentication failed. Token: {'Present' if hf_token else 'Missing'}"
+            elif response.status_code == 403:
+                return "Access denied. Accept model terms at https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3"
             else:
-                return f"Mistral API error: {response.status_code} - {response.text}"
+                return f"API error {response.status_code}: {response.text[:200]}"
             
         else:
             # Local model handling
