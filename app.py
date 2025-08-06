@@ -24,20 +24,35 @@ def load_summarizer():
     import os
     from pathlib import Path
     
-    if Path("./mistral-7b-instruct-v0.2.Q4_K_M.gguf").exists():
-        from llama_cpp import Llama
-        os.environ['GGML_METAL'] = '0'
-        
-        llm = Llama(
-            model_path="./mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-            n_ctx=32768,
-            n_threads=8,
-            n_gpu_layers=0,
-            verbose=False
-        )
-        return llm
-    else:
-        return "huggingface_api"
+    # Try to load local model first
+    local_models = [
+        "./mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        "./models/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        "./mistral-7b-instruct-v0.1.Q4_K_M.gguf"
+    ]
+    
+    for model_path in local_models:
+        if Path(model_path).exists():
+            try:
+                from llama_cpp import Llama
+                os.environ['GGML_METAL'] = '0'
+                
+                llm = Llama(
+                    model_path=model_path,
+                    n_ctx=4096,  # Reduced context for better performance
+                    n_threads=4,  # Reduced threads for stability
+                    n_gpu_layers=0,
+                    verbose=False
+                )
+                st.success(f"✅ Loaded local model: {model_path}")
+                return llm
+            except Exception as e:
+                st.warning(f"Failed to load local model {model_path}: {str(e)}")
+                continue
+    
+    # Fall back to Hugging Face API
+    st.info("🌐 Using Hugging Face API for AI summaries")
+    return "huggingface_api"
 
 def extract_name_from_text(text):
     lines = text.strip().split('\n')[:5]
@@ -98,83 +113,196 @@ def generate_ai_summary(job_description: str,
     try:
         match_percentage = similarity_score * 100
         
-        prompt = f"""[INST] You are an expert technical recruiter reviewing a candidate's resume in relation to a specific job description. A semantic similarity score of {match_percentage:.1f}% was computed, reflecting the degree of alignment between the candidate's experience and the role's requirements. Use this score to guide your judgment: scores around 20–40% indicate limited overlap with some relevant elements; 40–60% suggests partial alignment; 60–80% signals strong fit across core criteria; and scores above 80% reflect an exceptional match.
+        # Simplified prompt that works better with the API
+        prompt = f"""You are an expert recruiter. Analyze this candidate's resume against the job requirements and provide a 2-3 sentence assessment.
 
-Write a concise, specific, and insightful 2–3 sentence evaluation that accurately reflects the candidate's qualifications. Prioritize clarity over formality, and focus on areas of demonstrated alignment, notable gaps, and real potential to grow into the role. Avoid generalities or generic soft skill phrases unless grounded in observable evidence from the resume. This summary should read as if you were presenting the candidate to a hiring manager, honest, efficient, and grounded in substance.
+Job Requirements:
+{job_description[:1000]}
 
-JOB DESCRIPTION:
-{job_description}
+Candidate Resume:
+{resume_text[:2000]}
 
-CANDIDATE RESUME:
-{resume_text}
+Match Score: {match_percentage:.1f}%
 
-ASSESSMENT: [/INST]"""
+Assessment:"""
 
         if mistral_llm == "huggingface_api":
             import requests
             import os
+            import time
             
+            # Try to get HF token from secrets or environment
+            hf_token = None
             try:
-                hf_token = st.secrets.get("HF_TOKEN", None)
+                if hasattr(st, 'secrets') and 'HF_TOKEN' in st.secrets:
+                    hf_token = st.secrets["HF_TOKEN"]
             except:
+                pass
+            
+            if not hf_token:
                 hf_token = os.getenv("HF_TOKEN")
             
+            # If no token, try without authentication (public inference API)
             headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
             
-            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+            # Use a more reliable model endpoint
+            api_url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
             
-            payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": 500,
-                    "temperature": 0.3,
-                    "top_p": 0.9,
-                    "top_k": 50,
-                    "repetition_penalty": 1.1,
-                    "stop": ["[INST]"]
-                }
-            }
+            # Try multiple models in case one fails
+            model_urls = [
+                "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
+                "https://api-inference.huggingface.co/models/gpt2",
+                "https://api-inference.huggingface.co/models/distilgpt2"
+            ]
             
-            response = requests.post(api_url, headers=headers, json=payload)
+            for api_url in model_urls:
+                try:
+                    payload = {
+                        "inputs": prompt,
+                        "parameters": {
+                            "max_new_tokens": 200,
+                            "temperature": 0.7,
+                            "do_sample": True,
+                            "return_full_text": False
+                        }
+                    }
+                    
+                    response = requests.post(
+                        api_url, 
+                        headers=headers, 
+                        json=payload,
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        
+                        # Handle different response formats
+                        if isinstance(result, list) and len(result) > 0:
+                            if "generated_text" in result[0]:
+                                summary = result[0]["generated_text"].strip()
+                            elif "text" in result[0]:
+                                summary = result[0]["text"].strip()
+                            else:
+                                continue
+                        elif isinstance(result, dict):
+                            if "generated_text" in result:
+                                summary = result["generated_text"].strip()
+                            elif "text" in result:
+                                summary = result["text"].strip()
+                            else:
+                                continue
+                        else:
+                            continue
+                        
+                        # Clean up the summary
+                        if summary and len(summary) > 20:
+                            # Remove the original prompt if it's echoed back
+                            if prompt in summary:
+                                summary = summary.replace(prompt, "").strip()
+                            
+                            # Clean up common artifacts
+                            summary = summary.replace("[/INST]", "").replace("</s>", "").strip()
+                            
+                            # Basic validation - make sure it's not just repeating input
+                            if (not summary.lower().startswith(job_description[:30].lower()) and 
+                                not summary.lower().startswith(resume_text[:30].lower()) and
+                                len(summary) > 30):
+                                return summary
+                    
+                    elif response.status_code == 503:
+                        # Model is loading, wait and try next
+                        time.sleep(2)
+                        continue
+                    
+                except requests.exceptions.RequestException:
+                    continue
             
-            if response.status_code == 200:
-                result = response.json()
-                if isinstance(result, list) and len(result) > 0:
-                    summary = result[0].get("generated_text", "").replace(prompt, "").strip()
-                else:
-                    summary = "Could not generate summary."
-            else:
-                summary = "Could not generate summary."
+            # If all API calls fail, generate a basic rule-based summary
+            return generate_rule_based_summary(job_description, resume_text, similarity_score)
+            
         else:
+            # Local model handling
             response = mistral_llm(
                 prompt,
-                max_tokens=500,
-                temperature=0.3,
+                max_tokens=300,
+                temperature=0.7,
                 top_p=0.9,
                 top_k=50,
                 repeat_penalty=1.1,
-                stop=["[INST]"],
+                stop=["Assessment:", "\n\n"],
                 echo=False
             )
             
             if 'choices' in response and len(response['choices']) > 0:
                 summary = response['choices'][0]['text'].strip()
-            else:
-                summary = "Could not generate summary."
-        
-        if summary and len(summary) > 10:
-            summary = summary.replace("[/INST]", "").replace("</s>", "").strip()
+                if summary and len(summary) > 20:
+                    return summary
             
-            if (summary.lower().startswith(job_description[:50].lower()) or 
-                summary.lower().startswith(resume_text[:50].lower())):
-                summary = "Could not generate summary."
-            
-            return summary
-        else:
-            return "Could not generate summary."
+            # Fallback to rule-based if local model fails
+            return generate_rule_based_summary(job_description, resume_text, similarity_score)
 
     except Exception as e:
-        return f"Could not generate summary due to an error: {str(e)}"
+        st.error(f"Error generating AI summary: {str(e)}")
+        return generate_rule_based_summary(job_description, resume_text, similarity_score)
+
+def generate_rule_based_summary(job_description: str, resume_text: str, similarity_score: float) -> str:
+    """Generate a rule-based summary when AI models are unavailable"""
+    match_percentage = similarity_score * 100
+    
+    # Extract key skills/technologies from job description
+    job_keywords = extract_key_terms(job_description.lower())
+    resume_keywords = extract_key_terms(resume_text.lower())
+    
+    # Find matching keywords
+    matching_keywords = job_keywords.intersection(resume_keywords)
+    
+    if match_percentage >= 70:
+        strength = "strong"
+        fit_desc = "excellent alignment"
+    elif match_percentage >= 50:
+        strength = "good"
+        fit_desc = "solid alignment"
+    elif match_percentage >= 30:
+        strength = "moderate"
+        fit_desc = "partial alignment"
+    else:
+        strength = "limited"
+        fit_desc = "some relevant experience"
+    
+    summary = f"This candidate shows {fit_desc} with the role requirements ({match_percentage:.1f}% match). "
+    
+    if matching_keywords:
+        key_matches = list(matching_keywords)[:3]
+        summary += f"Key matching areas include: {', '.join(key_matches)}. "
+    
+    if match_percentage >= 60:
+        summary += "Strong candidate worth interviewing."
+    elif match_percentage >= 40:
+        summary += "Candidate has potential with some skill gaps to consider."
+    else:
+        summary += "Limited match but may have transferable skills."
+    
+    return summary
+
+def extract_key_terms(text: str) -> set:
+    """Extract key technical terms and skills from text"""
+    import re
+    
+    # Common technical terms and skills
+    tech_patterns = [
+        r'\b(?:python|java|javascript|react|node|sql|aws|docker|kubernetes|git)\b',
+        r'\b(?:machine learning|data science|frontend|backend|full stack|devops)\b',
+        r'\b(?:api|database|cloud|agile|scrum|ci/cd|microservices)\b',
+        r'\b(?:html|css|mongodb|postgresql|redis|elasticsearch)\b'
+    ]
+    
+    terms = set()
+    for pattern in tech_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        terms.update([match.lower() for match in matches])
+    
+    return terms
 
 st.title("Candidate Recommendation Engine")
 
