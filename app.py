@@ -211,13 +211,11 @@ with col2:
         
         num_candidates = st.slider(
             "Number of top candidates to display",
-            min_value=1,
+            min_value=0,
             max_value=max_candidates,
             value=default_candidates,
             help="Select how many top-ranked candidates to show in results"
         )
-    else:
-        num_candidates = 5
 
 st.subheader("Analysis")
 analyze_button = st.button(
