@@ -39,18 +39,12 @@ cd sprouts
 pip install -r requirements.txt
 ```
 
-### 3. Download the AI Model
-The application uses a local AI model for generating summaries. This file is 3 GB in size:
-```bash
-huggingface-cli download TheBloke/Mistral-7B-Instruct-v0.2-GGUF mistral-7b-instruct-v0.2.Q4_K_M.gguf --local-dir . --local-dir-use-symlinks False
-```
-
-### 4. Launch the Application
+### 3. Launch the Application
 ```bash
 streamlit run app.py
 ```
 
-### 5. Access the Interface
+### 4. Access the Interface
 Open your web browser and navigate to `http://localhost:8501` to access the application interface.
 
 ## Usage Instructions
@@ -64,7 +58,7 @@ Open your web browser and navigate to `http://localhost:8501` to access the appl
 
 **Supported File Formats**: The application accepts PDF and plain text files. Password-protected PDFs cannot be processed.
 
-**Performance**: Processing time varies based on the number of resumes and document length. The AI model runs locally, which may require patience for large batches.
+**Performance**: Processing time varies based on the number of resumes and document length.
 
 **Data Quality**: Results depend on the clarity and completeness of both job descriptions and resume content. Well-formatted, detailed documents produce more accurate rankings.
 
@@ -82,5 +76,5 @@ The application leverages several key technologies:
 
 - **Language Support**: Optimized for English-language content; performance with other languages may vary
 - **System Requirements**: Large resume batches require sufficient system memory for processing
-- **Local Processing**: The AI model runs entirely on your machine, ensuring data privacy but requiring computational resources
+- **AI Processing**: The AI model ensures data privacy while providing intelligent candidate assessments
 - **Error Handling**: Corrupted or unreadable files are automatically skipped with appropriate warnings displayed
