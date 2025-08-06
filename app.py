@@ -147,8 +147,7 @@ def generate_ai_summary(job_description: str,
             # MISTRAL ONLY - no fallbacks
             headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
             
-            primary_api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
-            fallback_api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
             
             payload = {
                 "inputs": prompt,
@@ -162,20 +161,12 @@ def generate_ai_summary(job_description: str,
                 }
             }
             
-            def _call_mistral(url):
-                try:
-                    return requests.post(
-                        url,
-                        headers=headers,
-                        json=payload,
-                        timeout=60
-                    )
-                except requests.exceptions.RequestException:
-                    return None
-            
-            response = _call_mistral(primary_api_url)
-            if (response is None) or (response.status_code == 404):
-                response = _call_mistral(fallback_api_url)
+            response = requests.post(
+                api_url,
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
 
             
             if response.status_code == 200:
