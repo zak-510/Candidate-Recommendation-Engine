@@ -1,4 +1,4 @@
-# Resume Matcher
+# Candidate Recommendation Engine
 
 Streamline your recruitment process with an AI-powered tool that matches candidates to job requirements. Instead of manually reviewing resumes, this application analyzes and ranks candidates based on how well their qualifications align with your job description.
 
