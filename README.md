@@ -1,6 +1,6 @@
 # Candidate Recommendation Engine
 
-Streamline your recruitment process with an AI-powered tool that matches candidates to job requirements. Instead of manually reviewing resumes, this application analyzes and ranks candidates based on how well their qualifications align with your job description.
+Instead of manually reviewing resumes, this application analyzes and ranks candidates based on how well their qualifications align with your job description.
 
 ## What It Does
 
@@ -63,10 +63,3 @@ The application leverages several key technologies:
 - **Mistral Small 3.1 24B**: Advanced 24B parameter model via OpenRouter API for high-quality candidate assessments
 - **PyMuPDF**: Extracts text content from PDF documents
 - **Scikit-learn**: Performs cosine similarity calculations for ranking
-
-## Limitations and Notes
-
-- **Language Support**: Optimized for English-language content; performance with other languages may vary
-- **System Requirements**: Large resume batches require sufficient system memory for processing
-- **AI Processing**: The AI model ensures data privacy while providing intelligent candidate assessments
-- **Error Handling**: Corrupted or unreadable files are automatically skipped with appropriate warnings displayed
