@@ -28,9 +28,6 @@ Key capabilities include:
 
 This application is designed to run on Streamlit Cloud with cloud-based AI processing.
 
-### Access the Live Application
-The application is deployed and accessible at your Streamlit Cloud URL.
-
 ### Local Development (Optional)
 If you want to run locally for development:
 
@@ -41,22 +38,20 @@ If you want to run locally for development:
 
 ## Usage Instructions
 
-1. **Enter Job Description**: Paste the job description in the provided text area. More detailed descriptions yield better matching results.
+1. **Enter Job Description**: Paste the job description in the provided text area. More detailed descriptions gives better matching results.
 2. **Upload Resume Files**: Select and upload candidate resumes in PDF or plain text format.
 3. **Run Analysis**: Click the analyze button to process the uploaded resumes against the job requirements.
 4. **Review Results**: Candidates are displayed in ranked order with similarity scores.
 
 ## Requirements and Considerations
 
-**Supported File Formats**: The application accepts PDF and plain text files. Password-protected PDFs cannot be processed.
+**Supported File Formats**: The application takes PDF and plain text files. Password-protected PDFs cannot be processed.
 
 **Performance**: Processing time varies based on the number of resumes and document length.
 
 **Data Quality**: Results depend on the clarity and completeness of both job descriptions and resume content. Well-formatted, detailed documents produce more accurate rankings.
 
 ## Tech Architecture
-
-The application leverages several key technologies:
 
 - **Streamlit**: Provides the web-based user interface and application framework
 - **Sentence Transformers**: Handles semantic text embeddings using the all-MiniLM-L6-v2 model
